@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movie Details</title>
+<style>
+    /* Reset */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(120deg, #0f0f0f, #1a1a1a);
+        color: #f0f0f0;
+        overflow-x: hidden;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    body.light-mode {
+        background: linear-gradient(120deg, #f8f8f8, #e0e0e0);
+        color: #121212;
+    }
+
+    /* Toggle Button */
+    #toggleMode {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        padding: 10px 15px;
+        border-radius: 5px;
+        border: none;
+        background-color: rgba(68, 68, 68, 0.8);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10;
+        transition: background 0.3s;
+    }
+
+    #toggleMode:hover { background-color: rgba(34, 34, 34, 0.8); }
+
+    /* Back Button */
+    .back-btn {
+        margin: 20px 0;
+        padding: 12px 25px;
+        font-size: 16px;
+        border-radius: 25px;
+        border: none;
+        background-color: #ff6f61;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s, transform 0.2s;
+    }
+    .back-btn:hover { background-color: #ff3b2f; transform: scale(1.05); }
+
+    /* Container */
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 30px;
+        padding: 40px 20px;
+        max-width: 1400px;
+        margin: auto;
+    }
+
+    /* Poster */
+    .poster {
+        flex: 1 1 400px;
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        transition: transform 0.3s;
+    }
+    .poster img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 20px;
+    }
+    .poster:hover { transform: scale(1.05); }
+
+    /* Info */
+    .info {
+        flex: 2 1 600px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .info h1 {
+        font-size: 3em;
+        color: #ff6f61;
+        line-height: 1.2;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+    }
+
+    .info p {
+        line-height: 1.6;
+        font-size: 1.1em;
+        color: #ddd;
+    }
+
+    .genres {
+        color: #ffcc00;
+        font-style: italic;
+        font-size: 1.1em;
+    }
+
+    .rating {
+        font-weight: bold;
+        color: #ffcc00;
+    }
+
+    /* Loading Spinner */
+    #loading {
+        width: 60px;
+        height: 60px;
+        border: 6px solid rgba(255,255,255,0.2);
+        border-top: 6px solid #ff6f61;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 100px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+        .container { flex-direction: column; align-items: center; text-align: center; }
+        .poster { max-width: 300px; }
+        .info h1 { font-size: 2.2em; }
+    }
+</style>
+</head>
+<body>
+
+<button id="toggleMode" onclick="toggleMode()">Light/Dark</button>
+
+<div id="loading"></div>
+
+<div class="container" id="movie-details" style="display:none;"></div>
+
+<div style="text-align:center;">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const movieId = urlParams.get('id');
+
+async function loadMovieDetails() {
+    const detailsDiv = document.getElementById('movie-details');
+    const loading = document.getElementById('loading');
+
+    try {
+        const response = await fetch(`/movie?id=${movieId}`);
+        const movie = await response.json();
+        loading.style.display = "none";
+        detailsDiv.style.display = "flex";
+
+        const poster = movie.poster_path 
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : "https://via.placeholder.com/400x600?text=No+Image";
+
+        detailsDiv.innerHTML = `
+            <div class="poster">
+                <img src="${poster}" alt="${movie.title}">
+            </div>
+            <div class="info">
+                <h1>${movie.title}</h1>
+                <p><strong>Release Date:</strong> ${movie.release_date || 'N/A'}</p>
+                <p><strong>Rating:</strong> <span class="rating">${movie.vote_average || 'N/A'}</span></p>
+                <p><strong>Overview:</strong> ${movie.overview || 'No description available.'}</p>
+                <p class="genres"><strong>Genres:</strong> ${movie.genres.map(g => g.name).join(', ')}</p>
+            </div>
+        `;
+    } catch (err) {
+        loading.style.display = "none";
+        detailsDiv.style.display = "block";
+        detailsDiv.innerHTML = "<p style='text-align:center; font-size:18px;'>Error loading movie details. Please try again later.</p>";
+        console.error(err);
+    }
+}
+
+function goBack() { window.history.back(); }
+function toggleMode() { document.body.classList.toggle('light-mode'); }
+
+loadMovieDetails();
+</script>
+
+</body>
+</html>

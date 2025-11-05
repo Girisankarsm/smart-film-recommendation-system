@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Film Recommendation</title>
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background: #121212;
+        color: #f0f0f0;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #ff6f61;
+        margin-bottom: 30px;
+        font-size: 2rem;
+    }
+
+    .search-container {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    input, button {
+        padding: 10px;
+        margin: 5px;
+        border-radius: 5px;
+        border: none;
+        font-size: 16px;
+    }
+
+    input {
+        width: 250px;
+    }
+
+    button {
+        background-color: #ff6f61;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    button:hover {
+        background-color: #ff3b2f;
+    }
+
+    #movies {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .movie-card {
+        position: relative;
+        background: #1f1f1f;
+        border-radius: 10px;
+        overflow: hidden;
+        width: 200px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .movie-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(255,111,97,0.6);
+    }
+
+    .movie-card img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .movie-info {
+        padding: 10px;
+        text-align: left;
+    }
+
+    .movie-info h3 {
+        font-size: 16px;
+        margin: 5px 0;
+        height: 40px;
+        overflow: hidden;
+    }
+
+    .imdb-rating {
+        color: #ffcc00;
+        font-weight: bold;
+        font-size: 14px;
+        margin: 5px 0;
+    }
+
+    .movie-info p {
+        font-size: 13px;
+        color: #ccc;
+        margin: 5px 0;
+        height: 36px;
+        overflow: hidden;
+    }
+
+    #loadMore {
+        display: none;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: none;
+        background-color: #ff6f61;
+        color: white;
+        cursor: pointer;
+    }
+
+    #loading {
+        display: none;
+        text-align: center;
+        font-size: 16px;
+        color: #ff6f61;
+        margin-bottom: 20px;
+    }
+
+    @media (max-width: 600px) {
+        .movie-card {
+            width: 140px;
+        }
+        .movie-card img {
+            height: 210px;
+        }
+        .movie-info h3 {
+            font-size: 14px;
+            height: 32px;
+        }
+        .movie-info p {
+            font-size: 12px;
+            height: 30px;
+        }
+    }
+</style>
+</head>
+<body>
+
+<h1>AI Film Recommendation</h1>
+
+<div class="search-container">
+    <input type="text" id="genre" list="genres" placeholder="Enter genre (Action, Comedy, Drama...)">
+    <datalist id="genres">
+        <option value="Action">
+        <option value="Comedy">
+        <option value="Drama">
+        <option value="Horror">
+        <option value="Thriller">
+        <option value="Romance">
+        <option value="Sci-Fi">
+        <option value="Fantasy">
+    </datalist>
+    <button onclick="getRecommendations()">Get Recommendations</button>
+</div>
+
+<div id="loading">Loading movies...</div>
+<div id="movies"></div>
+<button id="loadMore">Load More</button>
+
+<script>
+let currentPage = 1;
+let currentGenre = "";
+
+async function getRecommendations(loadMore = false) {
+    const genreInput = document.getElementById('genre').value.trim();
+    const moviesDiv = document.getElementById('movies');
+    const loading = document.getElementById('loading');
+
+    if (!loadMore) {
+        currentGenre = genreInput;
+        currentPage = 1;
+        moviesDiv.innerHTML = "";
+    } else {
+        currentPage++;
+    }
+
+    if (!currentGenre) return alert("Please enter a genre!");
+
+    loading.style.display = "block";
+
+    try {
+        const response = await fetch(`/recommend?genre=${currentGenre}&page=${currentPage}`);
+        const data = await response.json();
+        loading.style.display = "none";
+
+        if (!data.results || data.results.length === 0) {
+            if(!loadMore) moviesDiv.innerHTML = "<p>No movies found for this genre.</p>";
+            document.getElementById('loadMore').style.display = "none";
+            return;
+        }
+
+        data.results.forEach(movie => {
+            const poster = movie.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : "https://via.placeholder.com/200x300?text=No+Image";
+
+            moviesDiv.innerHTML += `
+                <div class="movie-card" onclick="showDetails('${movie.id}')">
+                    <img src="${poster}" alt="${movie.title}" loading="lazy">
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <div class="imdb-rating">IMDb: ${movie.vote_average || 'N/A'}</div>
+                        <p>${(movie.overview || 'No description available').slice(0, 60)}...</p>
+                        <p>Release: ${movie.release_date || 'N/A'}</p>
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById('loadMore').style.display = (currentPage < data.total_pages) ? "block" : "none";
+
+    } catch (err) {
+        loading.style.display = "none";
+        moviesDiv.innerHTML = "<p>Error fetching movies. Please try again later.</p>";
+        console.error(err);
+    }
+}
+
+function showDetails(movieId) {
+    window.location.href = `/details.html?id=${movieId}`;
+}
+
+document.getElementById('loadMore').addEventListener('click', () => getRecommendations(true));
+</script>
+
+</body>
+</html>
